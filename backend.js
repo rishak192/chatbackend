@@ -4,6 +4,8 @@ var cors=require('cors')
 
 app.use(cors())
 
+require('dotenv/config')
+
 const http = require('http').Server(app);
 const io = require('socket.io')(http, { 'transports': ['websocket', 'polling'] });
 
@@ -11,7 +13,7 @@ const io = require('socket.io')(http, { 'transports': ['websocket', 'polling'] }
 
 // app.use(Chat)
 
-http.listen(4000 || process.env.PORT, () => {
+http.listen(process.env.PORT, () => {
     console.log("listening");
 })
 

@@ -97,11 +97,7 @@ io.on('connection', socket => {
 
 
 app.get('/', (req, res) => {
-    // console.log("Getting");
-    User.find().then(res => {
-        console.log(res[0]);
-    })
-    res.send("Started")
+    res.send("third")
 })
 
 app.get('/alluser', (req, res) => {

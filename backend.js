@@ -21,15 +21,38 @@ const User = require('./Models/user')
 const { removeAllListeners } = require('./Models/chat')
 
 mongoose.connect(process.env.URL, { useNewUrlParser: true, useUnifiedTopology: true }, () => {
-    console.log('Database Connected');
+    //console.log('Database Connected');
 })
 
+const users={}
+
 io.on('connection', socket => {
-    console.log("Connected");
+    //console.log("Connected");
 
 
     socket.on('join', ({ userid, chatid, chattingwith }) => {
-        console.log("chatid chattingwith", chatid, chattingwith, userid);
+        //console.log("chatid chattingwith", chatid, chattingwith, userid);
+
+        users[userid]=true;
+
+        //console.log(users);
+
+        socket.on('disconnect', () => {
+            //console.log("Disconnected");
+            users[userid]=false
+            //console.log(users);
+            socket.broadcast.emit('disconnected',userid)
+        })
+
+        socket.join(chatid);
+        socket.broadcast.emit('online', users);
+        socket.emit('friendsonline',users)
+
+        socket.on('leaveroom',data=>{
+            //console.log("room leaving",data);
+            var left=socket.leave(data);
+            socket.emit("roomleft",left)
+        })
 
         User.updateOne({ name: userid },
             {
@@ -37,7 +60,7 @@ io.on('connection', socket => {
                     ["chatid." + chatid]: true
                 }
             }, { upsert: true }).then((result) => {
-                // console.log(result);
+                //console.log(result);
             })
 
         User.updateOne({ name: chattingwith },
@@ -46,12 +69,12 @@ io.on('connection', socket => {
                     ["chatid." + chatid]: true
                 }
             }, { upsert: true }).then((result) => {
-                // console.log(result);
+                //console.log(result);
             })
 
         Chat.findOne({ chatid: chatid }).then(res => {
             if (res !== null) {
-                // console.log(res.mesDetails);
+                //console.log(res.mesDetails);
                 socket.emit('started', res.mesDetails)
             }
         })
@@ -68,37 +91,35 @@ io.on('connection', socket => {
         // });
 
         User.findOne({ name: userid }).then(res => {
-            // console.log('user', res);
+            console.log('user', res);
             if (res === null) {
                 const user = new User({ name: userid })
                 user.save().then(res => {
-                    // console.log(res);
+                    console.log(res);
                 })
             }
         })
 
         Chat.findOne({ chatid: chatid }).then(res => {
-            // console.log('chat', res);
+            console.log('chat', res);
             if (res === null) {
                 const chat = new Chat({ chatid: chatid })
                 chat.save().then(res => {
-                    // console.log(res);
+                    console.log(res);
                 })
             }
         })
-        socket.join(chatid);
-        socket.emit('joinsuccess', chatid);
     })
 
     socket.on('type', ({ userid, chatid }) => {
-        // console.log(userid, chatid);
+        console.log(userid, chatid);
         socket.broadcast.to(chatid).emit('typing', { userid, chatid });
     })
 
     socket.on('send', ({ mes, id, chatId }) => {
         // socket.emit('recieve',{mes,id});
-        // console.log(mes,id,chatId);
-        // console.log(mes,id,chatId);
+        console.log(mes,id,chatId);
+        console.log(mes,id,chatId);
         var d = new Date(Date.now());
 
         var chatDocument = {
@@ -124,10 +145,6 @@ io.on('connection', socket => {
                 socket.broadcast.to(chatId).emit('receive', { mes, id, datetime });
             })
     })
-
-    socket.on('disconnect', () => {
-        console.log("Disconnected");
-    })
 })
 
 
@@ -137,22 +154,22 @@ app.get('/', (req, res) => {
 
 app.get('/alluser',async (req, res) => {
     await User.find().then(result => {
-        // console.log(result);
+        console.log(result);
         res.json({ result })
     })
 })
 
 app.get('/prevchats/:userid', async (req, res) => {
     const userid = req.params.userid
-    // console.log("userid ", userid);
+    //console.log("userid ", userid);
 
     await User.findOne({ name: userid }).then(result => {
-        // console.log("result ", result, "userid ", userid);
+        //console.log("result ", result, "userid ", userid);
         res.json({ result })
     })
 
 })
 
 http.listen(process.env.PORT, () => {
-    console.log("listening");
+    //console.log("listening");
 })

@@ -7,9 +7,17 @@ app.use(cors())
 
 require('dotenv/config')
 
-app.use(bodyParser.urlencoded({ extended: false }))
+// app.use(bodyParser())
 
-app.use(bodyParser.json())
+app.use(bodyParser.json({
+    limit: '20mb'
+}))
+
+app.use(bodyParser.urlencoded({
+    limit: '20mb',
+    parameterLimit: 100000,
+    extended: true
+}))
 
 const mongoose = require('mongoose')
 
@@ -21,10 +29,10 @@ const User = require('./Models/user')
 const { removeAllListeners } = require('./Models/chat')
 
 mongoose.connect(process.env.URL, { useNewUrlParser: true, useUnifiedTopology: true }, () => {
-    //console.log('Database Connected');
+    console.log('Database Connected');
 })
 
-const users={}
+const users = {}
 
 io.on('connection', socket => {
     //console.log("Connected");
@@ -33,25 +41,31 @@ io.on('connection', socket => {
     socket.on('join', ({ userid, chatid, chattingwith }) => {
         //console.log("chatid chattingwith", chatid, chattingwith, userid);
 
-        users[userid]=true;
+        users[userid] = true;
 
         //console.log(users);
 
+        socket.on('image',({chatid,userid,result})=>{
+            // console.log(chatid,userid,result)
+            var img='img'
+            socket.broadcast.to(chatid).emit('imagereceived',{img,result})
+        })
+
         socket.on('disconnect', () => {
             //console.log("Disconnected");
-            users[userid]=false
+            users[userid] = false
             //console.log(users);
-            socket.broadcast.emit('disconnected',userid)
+            socket.broadcast.emit('disconnected', userid)
         })
 
         socket.join(chatid);
         socket.broadcast.emit('online', users);
-        socket.emit('friendsonline',users)
+        socket.emit('friendsonline', users)
 
-        socket.on('leaveroom',data=>{
+        socket.on('leaveroom', data => {
             //console.log("room leaving",data);
-            var left=socket.leave(data);
-            socket.emit("roomleft",left)
+            var left = socket.leave(data);
+            socket.emit("roomleft", left)
         })
 
         User.updateOne({ name: userid },
@@ -91,35 +105,35 @@ io.on('connection', socket => {
         // });
 
         User.findOne({ name: userid }).then(res => {
-            console.log('user', res);
+            // console.log('user', res);
             if (res === null) {
                 const user = new User({ name: userid })
                 user.save().then(res => {
-                    console.log(res);
+                    // console.log(res);
                 })
             }
         })
 
         Chat.findOne({ chatid: chatid }).then(res => {
-            console.log('chat', res);
+            // console.log('chat', res);
             if (res === null) {
                 const chat = new Chat({ chatid: chatid })
                 chat.save().then(res => {
-                    console.log(res);
+                    // console.log(res);
                 })
             }
         })
     })
 
     socket.on('type', ({ userid, chatid }) => {
-        console.log(userid, chatid);
+        // console.log(userid, chatid);
         socket.broadcast.to(chatid).emit('typing', { userid, chatid });
     })
 
     socket.on('send', ({ mes, id, chatId }) => {
         // socket.emit('recieve',{mes,id});
-        console.log(mes,id,chatId);
-        console.log(mes,id,chatId);
+        // console.log(mes,id,chatId);
+        // console.log(mes,id,chatId);
         var d = new Date(Date.now());
 
         var chatDocument = {
@@ -152,9 +166,9 @@ app.get('/', (req, res) => {
     res.send("third")
 })
 
-app.get('/alluser',async (req, res) => {
+app.get('/alluser', async (req, res) => {
     await User.find().then(result => {
-        console.log(result);
+        // console.log(result);
         res.json({ result })
     })
 })
@@ -170,6 +184,11 @@ app.get('/prevchats/:userid', async (req, res) => {
 
 })
 
+app.post('/image', async (req, res) => {
+    console.log(req.body);
+    res.json({ image: req.body.data[0] })
+})
+
 http.listen(process.env.PORT, () => {
-    //console.log("listening");
+    console.log("listening");
 })

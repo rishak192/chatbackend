@@ -45,11 +45,11 @@ io.on('connection', socket => {
 
         //console.log(users);
 
-        socket.on('image',({chatid,userid,result})=>{
-            // console.log(chatid,userid,result)
-            var img='img'
-            socket.broadcast.to(chatid).emit('imagereceived',{img,result})
-        })
+        // socket.on('image',({chatid,userid,result})=>{
+        //     console.log(chatid,userid,result)
+        //     var img='img'
+        //     socket.broadcast.to(chatid).emit('imagereceived',{img,result})
+        // })
 
         socket.on('disconnect', () => {
             //console.log("Disconnected");
@@ -130,15 +130,14 @@ io.on('connection', socket => {
         socket.broadcast.to(chatid).emit('typing', { userid, chatid });
     })
 
-    socket.on('send', ({ mes, id, chatId }) => {
-        // socket.emit('recieve',{mes,id});
-        // console.log(mes,id,chatId);
-        // console.log(mes,id,chatId);
+    socket.on('send', ({ mes, id, chatId ,type}) => {
+        // console.log(mes,id,chatId,type);
         var d = new Date(Date.now());
 
         var chatDocument = {
             message: mes,
             userid: id,
+            type:type,
             datetime: {
                 date: d.toDateString().toString(),
                 time: d.toTimeString().toString()
@@ -156,7 +155,7 @@ io.on('connection', socket => {
                     }
                 }
             }, { upsert: true }).then(() => {
-                socket.broadcast.to(chatId).emit('receive', { mes, id, datetime });
+                socket.broadcast.to(chatId).emit('receive', { mes, id, datetime,type });
             })
     })
 })

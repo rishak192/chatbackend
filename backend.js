@@ -38,8 +38,68 @@ io.on('connection', socket => {
     //console.log("Connected");
 
 
-    socket.on('join', ({ userid, chatid, chattingwith }) => {
-        //console.log("chatid chattingwith", chatid, chattingwith, userid);
+    socket.on('join', ({ userid, chatid }) => {
+        // console.log("userid chatid", userid, chatid);
+        users[userid] = true;
+        socket.join(chatid);
+        socket.broadcast.emit('online', users);
+        socket.emit('friendsonline', users)
+
+        socket.on('disconnect', () => {
+            // console.log("Disconnected ",chatid,userid);
+            socket.leave(chatid)
+            users[userid] = false
+            //console.log(users);
+            socket.broadcast.emit('disconnected', userid)
+            socket.emit('friendsonline', users)
+        })
+    })
+
+    socket.on('getchat', ({chatid}) => {
+        Chat.findOne({ chatid: chatid }).then(res => {
+            if (res !== null) {
+                socket.emit('started', res.mesDetails)
+            }
+        })
+    })
+
+    socket.on('newchat', ({ userid, chatid, chattingwith }) => {
+        User.updateOne({ name: userid },
+            {
+                $set: {
+                    ["chatid." + chatid]: true
+                }
+            }, { upsert: true }).then((result) => {
+                //console.log(result)
+            })
+
+        User.updateOne({ name: chattingwith },
+            {
+                $set: {
+                    ["chatid." + chatid]: true
+                }
+            }, { upsert: true }).then((result) => {
+            })
+
+        User.findOne({ name: userid }).then(res => {
+            if (res === null) {
+                const user = new User({ name: userid })
+                user.save().then(res => {
+                })
+            }
+        })
+
+        Chat.findOne({ chatid: chatid }).then(res => {
+            if (res === null) {
+                const chat = new Chat({ chatid: chatid })
+                chat.save().then(res => {
+                })
+            }
+        })
+    })
+
+    /*socket.on('join', ({ userid, chatid, chattingwith }) => {
+        console.log("chatid chattingwith", chatid, chattingwith, userid);
 
         users[userid] = true;
 
@@ -64,8 +124,8 @@ io.on('connection', socket => {
 
         socket.on('leaveroom', data => {
             //console.log("room leaving",data);
-            var left = socket.leave(data);
-            socket.emit("roomleft", left)
+            // var left = socket.leave(data);
+            // socket.emit("roomleft", left)
         })
 
         User.updateOne({ name: userid },
@@ -123,21 +183,21 @@ io.on('connection', socket => {
                 })
             }
         })
-    })
+    })*/
 
     socket.on('type', ({ userid, chatid }) => {
         // console.log(userid, chatid);
         socket.broadcast.to(chatid).emit('typing', { userid, chatid });
     })
 
-    socket.on('send', ({ mes, id, chatId ,type}) => {
+    socket.on('send', ({ mes, id, chatId, type }) => {
         // console.log(mes,id,chatId,type);
         var d = new Date(Date.now());
 
         var chatDocument = {
             message: mes,
             userid: id,
-            type:type,
+            type: type,
             datetime: {
                 date: d.toDateString().toString(),
                 time: d.toTimeString().toString()
@@ -155,7 +215,7 @@ io.on('connection', socket => {
                     }
                 }
             }, { upsert: true }).then(() => {
-                socket.broadcast.to(chatId).emit('receive', { mes, id, datetime,type });
+                socket.broadcast.to(chatId).emit('receive', { mes, id, datetime, type, chatId });
             })
     })
 })
